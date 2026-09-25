@@ -1,5 +1,5 @@
-import { open } from "@tauri-apps/plugin-dialog";
 import { listWorkspace, openFile } from "@/ipc/client";
+import { pickWorkspaceFolder } from "@/platform/workspacePicker";
 import { useWorkbenchStore } from "@/store/useWorkbenchStore";
 import type { FileEntry } from "@/types/ipc";
 
@@ -46,8 +46,8 @@ export function FileExplorer() {
   const setTree = useWorkbenchStore((s) => s.setTree);
 
   const pickFolder = async () => {
-    const selected = await open({ directory: true, multiple: false });
-    if (typeof selected !== "string") {
+    const selected = await pickWorkspaceFolder();
+    if (!selected) {
       return;
     }
     setRoot(selected);

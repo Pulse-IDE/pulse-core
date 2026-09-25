@@ -1,15 +1,20 @@
 import { useEffect, useRef } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { Terminal } from "@xterm/xterm";
+import XTerm from "@xterm/xterm";
+
+const Terminal =
+  (XTerm as unknown as { Terminal: typeof import("@xterm/xterm").Terminal })
+    .Terminal ?? XTerm;
 import {
   terminalCreate,
   terminalKill,
   terminalResize,
   terminalWrite,
 } from "@/ipc/client";
+import { drainWebTerminalOutput } from "@/ipc/client.web";
 import type { TerminalOutputEvent } from "@/types/ipc";
+import { isTauriRuntime } from "@/platform";
 import { useWorkbenchStore } from "@/store/useWorkbenchStore";
 import "@xterm/xterm/css/xterm.css";
 
@@ -40,6 +45,7 @@ export function TerminalPane() {
     fit.fit();
 
     let unlisten: (() => void) | undefined;
+    let pollTimer: number | undefined;
     let disposed = false;
 
     const syncSize = () => {
@@ -66,13 +72,40 @@ export function TerminalPane() {
         return;
       }
       sessionRef.current = sessionId;
-      unlisten = await listen<TerminalOutputEvent>("terminal://output", (event) => {
-        if (event.payload.sessionId === sessionId) {
-          term.write(event.payload.data);
+
+      if (isTauriRuntime()) {
+        const { listen } = await import("@tauri-apps/api/event");
+        unlisten = await listen<TerminalOutputEvent>(
+          "terminal://output",
+          (event) => {
+            if (event.payload.sessionId === sessionId) {
+              term.write(event.payload.data);
+            }
+          },
+        );
+      } else {
+        pollTimer = window.setInterval(() => {
+          const chunk = drainWebTerminalOutput(sessionId);
+          if (chunk) {
+            term.write(chunk);
+          }
+        }, 120);
+        const initial = drainWebTerminalOutput(sessionId);
+        if (initial) {
+          term.write(initial);
         }
-      });
+      }
+
       term.onData((data) => {
         void terminalWrite({ sessionId, data });
+        if (!isTauriRuntime()) {
+          window.setTimeout(() => {
+            const chunk = drainWebTerminalOutput(sessionId);
+            if (chunk) {
+              term.write(chunk);
+            }
+          }, 0);
+        }
       });
     };
 
@@ -83,6 +116,9 @@ export function TerminalPane() {
     return () => {
       disposed = true;
       window.removeEventListener("resize", syncSize);
+      if (pollTimer) {
+        window.clearInterval(pollTimer);
+      }
       if (unlisten) {
         unlisten();
       }

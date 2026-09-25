@@ -3,6 +3,7 @@ mod fs_ops;
 mod lsp;
 mod scm;
 mod terminal;
+mod update;
 
 use dap::{DapDispatchPayload, DapHub, DapLaunchPayload};
 use fs_ops::{list_workspace_tree, read_text_file, write_text_file, FileEntry, OpenFileResult};
@@ -122,6 +123,17 @@ fn ipc_dap_terminate(
     state.terminate(&session_id)
 }
 
+#[tauri::command]
+fn ipc_check_for_updates(app: tauri::AppHandle) -> Result<update::UpdateCheckResult, String> {
+    let current = app.package_info().version.to_string();
+    update::check_for_updates(&current)
+}
+
+#[tauri::command]
+fn ipc_apply_update(app: tauri::AppHandle, download_url: String) -> Result<(), String> {
+    update::apply_update(&app, &download_url)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let terminals: SharedTerminalManager = Arc::new(TerminalManager::new());
@@ -130,6 +142,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(terminals)
         .manage(lsp)
         .manage(dap)
@@ -149,6 +162,8 @@ pub fn run() {
             ipc_dap_launch,
             ipc_dap_dispatch,
             ipc_dap_terminate,
+            ipc_check_for_updates,
+            ipc_apply_update,
         ])
         .run(tauri::generate_context!())
         .expect("pulse startup failed");
