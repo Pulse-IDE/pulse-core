@@ -1,11 +1,13 @@
 import type { PulseExtensionContext } from "../../../sdk/types";
 
 const themeVariables: Record<string, string> = {
-  "--pulse-bg": "#050608",
-  "--pulse-surface": "#0f1318",
-  "--pulse-fg": "#eef2f7",
-  "--pulse-accent": "#5b9dff",
-  "--pulse-border": "#2a3140",
+  "--pulse-bg": "#05070b",
+  "--pulse-surface": "#0c1018",
+  "--pulse-fg": "#eef2f8",
+  "--pulse-accent": "#3b82f6",
+  "--pulse-border": "#243044",
+  "--pulse-muted": "#94a3b8",
+  "--pulse-sidebar": "#070a10",
 };
 
 function applyTheme(): void {

@@ -21,9 +21,9 @@ export function ActivityBar() {
           type="button"
           aria-label={item.label}
           onClick={() => setPanel(item.id)}
-          className={`h-9 w-9 rounded text-xs font-medium ${
+          className={`h-9 w-9 rounded-md text-[10px] font-semibold tracking-wide ${
             panel === item.id
-              ? "bg-pulse-accent text-white"
+              ? "bg-pulse-accent text-white shadow-[0_0_20px_rgba(59,130,246,0.35)]"
               : "text-pulse-muted hover:bg-pulse-surface"
           }`}
         >
